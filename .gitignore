@@ -1,2 +1,6 @@
 .env
 .ligo 
+_esy
+esy.lock
+node_modules
+package-lock.json

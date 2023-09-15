@@ -69,7 +69,7 @@ let pay_10tez_to_be_in_the_whitelist_creators (store : storage) : storage =
 
 let blacklist_creators (_address : address) (store : storage) : storage =
   let isAdmin = Map.find_opt (Tezos.get_sender()) store.admins in
-  let () = if (Option.unopt(isAdmin) = not True) then (failwith Errors.not_admin) in
+  let () = if (Option.unopt(isAdmin) = not True) then (failwith Errors.only_admin) in
   let map_opt : bool option = Map.find_opt _address store.whitelist_creators in
     match map_opt with
         | None -> failwith Errors.not_creator

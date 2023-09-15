@@ -15,11 +15,6 @@ let bootstrap_accounts () =
     in
     accounts
 
-// let moves : register =
-//   Map.literal [
-//     (("tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx" : address), (1,2));
-//     (("tz1gjaF81ZRRvdzjobyfVNsAeSC6PScjfQwN" : address), (0,3))]
-
 let initial_storage(admin : address) = {
     admin = Map.literal[
         ((admin : address), (true : bool));

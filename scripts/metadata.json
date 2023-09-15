@@ -1,0 +1,7 @@
+{
+    "name": "My Tezos Contract",
+    "version": "0.0.1",
+    "license": { "name": "ISC" },
+    "authors": [ "Charaf ZELLOU <team@blockchain-xpertise.com>" ],
+    "interfaces": [ "TZIP-012" ]
+  }

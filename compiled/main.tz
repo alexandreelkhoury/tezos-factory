@@ -1,239 +1,251 @@
 { parameter
-    (or (list %transfer
-           (pair (address %from_) (list %txs (pair (address %to_) (nat %token_id) (nat %amount)))))
-        (or (pair %balance_of
-               (list %requests (pair (address %owner) (nat %token_id)))
-               (contract %callback
-                  (list (pair (pair %request (address %owner) (nat %token_id)) (nat %balance)))))
-            (list %update_operators
-               (or (pair %add_operator (address %owner) (address %operator) (nat %token_id))
-                   (pair %remove_operator (address %owner) (address %operator) (nat %token_id)))))) ;
+    (or (or (or (address %add_admin) (address %blacklist_creators))
+            (or (unit %confirm_admin) (unit %pay_10tez_to_be_in_the_whitelist_creators)))
+        (address %remove_admin)) ;
   storage
-    (pair (pair (pair (address %extension) (big_map %ledger (pair address nat) nat))
-                (big_map %metadata string bytes)
-                (big_map %operators (pair address address) (set nat)))
-          (big_map %token_metadata nat (pair (nat %token_id) (map %token_info string bytes)))) ;
-  code { PUSH string "FA2_TOKEN_UNDEFINED" ;
-         LAMBDA
-           (pair (big_map (pair address nat) nat) address nat)
-           nat
-           { UNPAIR 3 ; DUG 2 ; PAIR ; GET ; IF_NONE { PUSH nat 0 } {} } ;
-         LAMBDA
-           (pair (big_map (pair address nat) nat) address nat nat)
-           (big_map (pair address nat) nat)
-           { UNPAIR 4 ; DIG 3 ; SOME ; DIG 3 ; DIG 3 ; PAIR ; UPDATE } ;
-         LAMBDA
-           address
-           unit
-           { PUSH string "The sender can only manage operators for his own token" ;
-             SENDER ;
-             DIG 2 ;
-             COMPARE ;
-             EQ ;
-             IF { DROP ; UNIT } { FAILWITH } } ;
-         DIG 4 ;
+    (pair (pair (map %admins address bool) (map %blacklist_creators address bool))
+          (map %can_be_admins address bool)
+          (map %whitelist_creators address bool)) ;
+  code { PUSH string "Only admin can call this function" ;
+         PUSH string "This address is not an admin" ;
+         DIG 2 ;
          UNPAIR ;
          IF_LEFT
-           { DIG 2 ;
-             DROP ;
-             DUP 2 ;
-             CAR ;
-             CAR ;
-             CDR ;
-             SWAP ;
-             ITER { UNPAIR ;
-                    DUG 2 ;
-                    ITER { UNPAIR 3 ;
-                           DUP 6 ;
-                           CDR ;
-                           DUP 3 ;
-                           GET ;
-                           IF_NONE { DUP 9 ; FAILWITH } { DROP } ;
-                           SENDER ;
-                           DUP 6 ;
-                           DUP 2 ;
-                           COMPARE ;
-                           EQ ;
-                           IF { DROP }
-                              { DUP 7 ;
-                                CAR ;
-                                CDR ;
-                                CDR ;
-                                SWAP ;
-                                DUP 7 ;
-                                PAIR ;
-                                GET ;
-                                IF_NONE { EMPTY_SET nat } {} ;
-                                DUP 3 ;
-                                MEM ;
-                                IF {} { PUSH string "FA2_NOT_OPERATOR" ; FAILWITH } } ;
-                           DUP 2 ;
-                           DUP 6 ;
-                           DUP 6 ;
-                           PAIR 3 ;
-                           DUP 9 ;
-                           SWAP ;
-                           EXEC ;
-                           DUP 4 ;
-                           DUP 2 ;
-                           COMPARE ;
-                           GE ;
-                           IF {} { PUSH string "FA2_INSUFFICIENT_BALANCE" ; FAILWITH } ;
-                           DUP 4 ;
-                           SWAP ;
-                           SUB ;
-                           ABS ;
-                           DUP 3 ;
-                           DUP 7 ;
-                           DIG 6 ;
-                           PAIR 4 ;
-                           DUP 7 ;
-                           SWAP ;
-                           EXEC ;
-                           DUP 3 ;
-                           DUP 3 ;
-                           DUP 3 ;
-                           PAIR 3 ;
-                           DUP 9 ;
-                           SWAP ;
-                           EXEC ;
-                           DIG 4 ;
-                           ADD ;
-                           DUG 3 ;
-                           PAIR 4 ;
-                           DUP 4 ;
-                           SWAP ;
-                           EXEC } ;
-                    SWAP ;
-                    DROP } ;
-             DIG 2 ;
-             DIG 3 ;
-             DIG 4 ;
-             DROP 3 ;
-             DUP 2 ;
-             DIG 2 ;
-             CAR ;
-             DUP ;
-             CAR ;
-             DIG 3 ;
-             UPDATE 2 ;
-             UPDATE 1 ;
-             UPDATE 1 ;
-             NIL operation }
-           { DIG 3 ;
-             DROP ;
-             IF_LEFT
+           { IF_LEFT
+               { IF_LEFT
+                   { DIG 2 ;
+                     DROP ;
+                     DUP 2 ;
+                     CAR ;
+                     CAR ;
+                     SENDER ;
+                     PAIR ;
+                     PUSH bool True ;
+                     SWAP ;
+                     UNPAIR ;
+                     GET ;
+                     IF_NONE { PUSH string "option is None" ; FAILWITH } {} ;
+                     COMPARE ;
+                     NEQ ;
+                     IF { DIG 2 ; FAILWITH } { DIG 2 ; DROP } ;
+                     DUP 2 ;
+                     CDR ;
+                     CAR ;
+                     DUP 2 ;
+                     GET ;
+                     IF_NONE
+                       { DUP 2 ;
+                         DUP 3 ;
+                         CDR ;
+                         DIG 3 ;
+                         CDR ;
+                         CAR ;
+                         PUSH bool True ;
+                         DIG 4 ;
+                         SWAP ;
+                         SOME ;
+                         SWAP ;
+                         UPDATE ;
+                         UPDATE 1 ;
+                         UPDATE 2 }
+                       { DROP 3 ;
+                         PUSH string
+                              "already elligible to be admin, waiting for confirmation, please call the 'confirm admin' function !" ;
+                         FAILWITH } }
+                   { DIG 3 ;
+                     DROP ;
+                     DUP 2 ;
+                     CAR ;
+                     CAR ;
+                     SENDER ;
+                     PAIR ;
+                     PUSH bool True ;
+                     NOT ;
+                     SWAP ;
+                     UNPAIR ;
+                     GET ;
+                     IF_NONE { PUSH string "option is None" ; FAILWITH } {} ;
+                     COMPARE ;
+                     EQ ;
+                     IF { DIG 2 ; FAILWITH } { DIG 2 ; DROP } ;
+                     DUP 2 ;
+                     CDR ;
+                     CDR ;
+                     DUP 2 ;
+                     GET ;
+                     IF_NONE
+                       { DROP 2 ; PUSH string "This address is not a creator !" ; FAILWITH }
+                       { DROP ;
+                         DUP 2 ;
+                         DUP 3 ;
+                         CAR ;
+                         DUP 4 ;
+                         CAR ;
+                         CDR ;
+                         PUSH bool True ;
+                         DUP 5 ;
+                         SWAP ;
+                         SOME ;
+                         SWAP ;
+                         UPDATE ;
+                         UPDATE 2 ;
+                         UPDATE 1 ;
+                         DUP ;
+                         CDR ;
+                         DIG 3 ;
+                         CDR ;
+                         CDR ;
+                         DIG 3 ;
+                         NONE bool ;
+                         SWAP ;
+                         UPDATE ;
+                         UPDATE 2 ;
+                         UPDATE 2 } } }
                { DIG 2 ;
-                 DROP ;
-                 UNPAIR ;
-                 MAP { DUP ;
-                       UNPAIR ;
-                       DUP 5 ;
-                       CDR ;
-                       DUP 3 ;
-                       GET ;
-                       IF_NONE { DUP 7 ; FAILWITH } { DROP } ;
-                       DUP 5 ;
-                       CAR ;
-                       CAR ;
-                       CDR ;
-                       PAIR 3 ;
-                       DUP 5 ;
-                       SWAP ;
-                       EXEC ;
-                       SWAP ;
-                       PAIR } ;
                  DIG 3 ;
-                 DIG 4 ;
                  DROP 2 ;
-                 SWAP ;
-                 PUSH mutez 0 ;
-                 DIG 2 ;
-                 TRANSFER_TOKENS ;
-                 SWAP ;
-                 NIL operation ;
-                 DIG 2 ;
-                 CONS }
+                 IF_LEFT
+                   { DROP ;
+                     DUP ;
+                     CAR ;
+                     CAR ;
+                     SENDER ;
+                     PAIR ;
+                     PUSH bool True ;
+                     SWAP ;
+                     UNPAIR ;
+                     GET ;
+                     IF_NONE { PUSH string "option is None" ; FAILWITH } {} ;
+                     COMPARE ;
+                     EQ ;
+                     IF { PUSH string "This address is already an admin !" ; FAILWITH } {} ;
+                     DUP ;
+                     CDR ;
+                     CAR ;
+                     SENDER ;
+                     GET ;
+                     IF_NONE
+                       { DROP ; PUSH string "You are not elligible to be admin !" ; FAILWITH }
+                       { DROP ;
+                         DUP ;
+                         CAR ;
+                         CAR ;
+                         PUSH bool True ;
+                         SENDER ;
+                         PAIR 3 ;
+                         DUP 2 ;
+                         CDR ;
+                         CAR ;
+                         SENDER ;
+                         PAIR ;
+                         DUP 3 ;
+                         DIG 3 ;
+                         CAR ;
+                         DIG 3 ;
+                         UNPAIR 3 ;
+                         SWAP ;
+                         SOME ;
+                         SWAP ;
+                         UPDATE ;
+                         UPDATE 1 ;
+                         UPDATE 1 ;
+                         DUP ;
+                         CDR ;
+                         DIG 2 ;
+                         UNPAIR ;
+                         NONE bool ;
+                         SWAP ;
+                         UPDATE ;
+                         UPDATE 1 ;
+                         UPDATE 2 } }
+                   { DROP ;
+                     PUSH mutez 10000000 ;
+                     AMOUNT ;
+                     COMPARE ;
+                     LT ;
+                     IF { PUSH string "You have to pay 10 tez to be a creator !" ; FAILWITH } {} ;
+                     DUP ;
+                     CDR ;
+                     CDR ;
+                     SENDER ;
+                     PAIR ;
+                     PUSH bool True ;
+                     SWAP ;
+                     UNPAIR ;
+                     GET ;
+                     IF_NONE { PUSH string "option is None" ; FAILWITH } {} ;
+                     COMPARE ;
+                     EQ ;
+                     IF { PUSH string "You are already a creator !" ; FAILWITH } {} ;
+                     DUP ;
+                     CAR ;
+                     CDR ;
+                     SENDER ;
+                     GET ;
+                     IF_NONE
+                       { DUP ;
+                         CDR ;
+                         CDR ;
+                         PUSH bool True ;
+                         SENDER ;
+                         PAIR 3 ;
+                         DUP 2 ;
+                         DIG 2 ;
+                         CDR ;
+                         DIG 2 ;
+                         UNPAIR 3 ;
+                         SWAP ;
+                         SOME ;
+                         SWAP ;
+                         UPDATE ;
+                         UPDATE 2 ;
+                         UPDATE 2 }
+                       { DROP 2 ; PUSH string "You are blacklisted !" ; FAILWITH } } } }
+           { DUP 2 ;
+             CAR ;
+             CAR ;
+             SENDER ;
+             PAIR ;
+             PUSH bool True ;
+             NOT ;
+             SWAP ;
+             UNPAIR ;
+             GET ;
+             IF_NONE { PUSH string "option is None" ; FAILWITH } {} ;
+             COMPARE ;
+             EQ ;
+             IF { DIG 3 ; FAILWITH } { DIG 3 ; DROP } ;
+             DUP 2 ;
+             CAR ;
+             CAR ;
+             DUP 2 ;
+             GET ;
+             IF_NONE
+               { DROP 2 ; FAILWITH }
                { DIG 3 ;
-                 DIG 4 ;
                  DROP 2 ;
                  DUP 2 ;
+                 DUP 3 ;
                  CAR ;
-                 CDR ;
-                 CDR ;
-                 SWAP ;
-                 ITER { IF_LEFT
-                          { UNPAIR 3 ;
-                            DUP 2 ;
-                            DUP 2 ;
-                            COMPARE ;
-                            EQ ;
-                            IF { DROP 3 }
-                               { DUP ;
-                                 DUP 7 ;
-                                 SWAP ;
-                                 EXEC ;
-                                 DROP ;
-                                 DUP 4 ;
-                                 DIG 4 ;
-                                 DUP 4 ;
-                                 DUP 4 ;
-                                 PAIR ;
-                                 GET ;
-                                 IF_NONE { EMPTY_SET nat } {} ;
-                                 DIG 4 ;
-                                 PUSH bool True ;
-                                 SWAP ;
-                                 UPDATE ;
-                                 SOME ;
-                                 DIG 3 ;
-                                 DIG 3 ;
-                                 PAIR ;
-                                 UPDATE } }
-                          { UNPAIR 3 ;
-                            DUP 2 ;
-                            DUP 2 ;
-                            COMPARE ;
-                            EQ ;
-                            IF { DROP 3 }
-                               { DUP ;
-                                 DUP 7 ;
-                                 SWAP ;
-                                 EXEC ;
-                                 DROP ;
-                                 DUP 4 ;
-                                 DIG 4 ;
-                                 DUP 4 ;
-                                 DUP 4 ;
-                                 PAIR ;
-                                 GET ;
-                                 IF_NONE
-                                   { DIG 3 ; DROP ; NONE (set nat) }
-                                   { DIG 4 ;
-                                     PUSH bool False ;
-                                     SWAP ;
-                                     UPDATE ;
-                                     PUSH nat 0 ;
-                                     DUP 2 ;
-                                     SIZE ;
-                                     COMPARE ;
-                                     EQ ;
-                                     IF { DROP ; NONE (set nat) } { SOME } } ;
-                                 DIG 3 ;
-                                 DIG 3 ;
-                                 PAIR ;
-                                 UPDATE } } } ;
-                 DIG 2 ;
-                 DROP ;
-                 DUP 2 ;
-                 DIG 2 ;
-                 CAR ;
-                 DUP ;
-                 CDR ;
                  DIG 3 ;
-                 UPDATE 2 ;
-                 UPDATE 2 ;
+                 CAR ;
+                 CAR ;
+                 DIG 3 ;
+                 NONE bool ;
+                 SWAP ;
+                 UPDATE ;
                  UPDATE 1 ;
-                 NIL operation } } ;
-         PAIR } }
+                 UPDATE 1 } } ;
+         NIL operation ;
+         PAIR } ;
+  view "isAdmin"
+       address
+       bool
+       { UNPAIR ;
+         SWAP ;
+         CAR ;
+         CAR ;
+         SWAP ;
+         GET ;
+         IF_NONE { PUSH string "This address is not an admin" ; FAILWITH } {} } }
 

@@ -30,8 +30,16 @@ ligo-compile:
 
 ligo-test: 
 	@echo "Test du contrat..."
-	@$(LIGO) run test ./tests/ligo/main.test.mligo 
-
+	@echo "[Test entrypoint AddAdmin...]"
+	@$(LIGO) run test ./tests/ligo/addAdmin.test.mligo 
+	@echo "[Test entrypoint RemoveAdmin...]"
+	@$(LIGO) run test ./tests/ligo/removeAdmin.test.mligo 
+	@echo "[Test entrypoint BlacklistCreators...]"
+	@$(LIGO) run test ./tests/ligo/blacklistCreators.test.mligo 
+	@echo "[Test entrypoint ConfirmAdmin...]"
+	@$(LIGO) run test ./tests/ligo/confirmAdmin.test.mligo
+	@echo "[Test entrypoint AddCreator...]"
+	@$(LIGO) run test ./tests/ligo/addCreator.test.mligo
 ######################################################################
 
 run-deploy : 

@@ -1,1 +1,1 @@
-*Factory of NFT contracts in CamelLigo*
+**Factory of NFT contracts in CamelLigo**
